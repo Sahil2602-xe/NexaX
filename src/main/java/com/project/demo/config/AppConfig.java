@@ -12,8 +12,6 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 @Configuration
 public class AppConfig {
 
@@ -44,16 +42,20 @@ public class AppConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        return (HttpServletRequest request) -> {
-            CorsConfiguration cfg = new CorsConfiguration();
-            cfg.setAllowedOriginPatterns(Collections.singletonList("*")); // ✅ all origins
-            cfg.setAllowedMethods(Collections.singletonList("*"));
-            cfg.setAllowedHeaders(Collections.singletonList("*"));
-            cfg.setAllowCredentials(true);
-            cfg.setExposedHeaders(Arrays.asList("Authorization"));
-            cfg.setMaxAge(3600L);
-            return cfg;
-        };
-    }
+public CorsConfigurationSource corsConfigurationSource() {
+    return request -> {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOrigins(Arrays.asList(
+            "http://localhost:5173", 
+            "https://nexa-x-frontend.vercel.app"
+        ));
+        cfg.setAllowedMethods(Collections.singletonList("*"));
+        cfg.setAllowedHeaders(Collections.singletonList("*"));
+        cfg.setAllowCredentials(true);
+        cfg.setExposedHeaders(Arrays.asList("Authorization"));
+        cfg.setMaxAge(3600L);
+        return cfg;
+    };
+}
+
 }
