@@ -30,36 +30,52 @@ public class JwtTokenValidator extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String path = request.getRequestURI();
+
+        // ✅ Skip JWT validation for these public endpoints
+        if (path.startsWith("/auth") ||
+            path.startsWith("/api/users/reset-password") ||
+            path.startsWith("/api/users/reset-pass") ||
+            path.startsWith("/api/users/verification")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String jwt = request.getHeader(JwtConstant.JWT_HEADER);
 
-        if (jwt != null && jwt.startsWith("Bearer ")) {
-            jwt = jwt.substring(7);
+        // ✅ Skip if no token is provided
+        if (jwt == null || !jwt.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            try {
-                SecretKey key = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
+        jwt = jwt.substring(7);
 
-                Claims claims = Jwts.parser()
-                        .verifyWith(key)
-                        .build()
-                        .parseSignedClaims(jwt)
-                        .getPayload();
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
 
-                String email = (String) claims.get("email");
-                String role = (String) claims.get("role");
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(jwt)
+                    .getPayload();
 
-                List<GrantedAuthority> authorities = new ArrayList<>();
-                if (role != null) {
-                    authorities.add(new SimpleGrantedAuthority(role));
-                }
-                Authentication authentication =
-                        new UsernamePasswordAuthenticationToken(email, null, authorities);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            String email = (String) claims.get("email");
+            String role = (String) claims.get("role");
 
-            } catch (Exception e) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired JWT token.");
-                return;
+            List<GrantedAuthority> authorities = new ArrayList<>();
+            if (role != null) {
+                authorities.add(new SimpleGrantedAuthority(role));
             }
+
+            Authentication authentication =
+                    new UsernamePasswordAuthenticationToken(email, null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Invalid or expired JWT token.");
+            return;
         }
 
         filterChain.doFilter(request, response);

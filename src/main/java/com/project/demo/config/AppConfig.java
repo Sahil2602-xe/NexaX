@@ -20,31 +20,24 @@ public class AppConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            
             .sessionManagement(management ->
                 management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
             .authorizeHttpRequests(auth -> auth
-
                 .requestMatchers(
-                    "/auth/**",                      
-                    "/api/users/reset-password/**", 
+                    "/auth/**",
+                    "/api/users/reset-password/**",
                     "/api/users/reset-pass/**",
-                    "/api/users/verification/**"     
+                    "/api/users/verification/**"
                 ).permitAll()
-
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
                 .requestMatchers("/api/**").authenticated()
-
                 .anyRequest().permitAll()
             )
 
             .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
-
             .csrf(csrf -> csrf.disable())
-
             .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         return http.build();
@@ -54,10 +47,7 @@ public class AppConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         return (HttpServletRequest request) -> {
             CorsConfiguration cfg = new CorsConfiguration();
-            cfg.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173", 
-                "http://localhost:3000" 
-            ));
+            cfg.setAllowedOriginPatterns(Collections.singletonList("*")); // ✅ all origins
             cfg.setAllowedMethods(Collections.singletonList("*"));
             cfg.setAllowedHeaders(Collections.singletonList("*"));
             cfg.setAllowCredentials(true);
