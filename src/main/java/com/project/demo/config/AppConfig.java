@@ -23,18 +23,12 @@ public class AppConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/auth/**",
-                    "/api/users/reset-password/**",
-                    "/api/users/reset-pass/**",
-                    "/api/users/verification/**"
-                ).permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll()
+                // ✅ Allow all for presentation/demo (no 403s)
+                .requestMatchers("/**").permitAll()
             )
 
             .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
+
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
@@ -42,20 +36,19 @@ public class AppConfig {
     }
 
     @Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    return request -> {
-        CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(Arrays.asList(
-            "http://localhost:5173", 
-            "https://nexa-x-frontend.vercel.app"
-        ));
-        cfg.setAllowedMethods(Collections.singletonList("*"));
-        cfg.setAllowedHeaders(Collections.singletonList("*"));
-        cfg.setAllowCredentials(true);
-        cfg.setExposedHeaders(Arrays.asList("Authorization"));
-        cfg.setMaxAge(3600L);
-        return cfg;
-    };
-}
-
+    public CorsConfigurationSource corsConfigurationSource() {
+        return request -> {
+            CorsConfiguration cfg = new CorsConfiguration();
+            cfg.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "https://nexa-x-frontend.vercel.app"
+            ));
+            cfg.setAllowedMethods(Collections.singletonList("*"));
+            cfg.setAllowedHeaders(Collections.singletonList("*"));
+            cfg.setAllowCredentials(true);
+            cfg.setExposedHeaders(Arrays.asList("Authorization"));
+            cfg.setMaxAge(3600L);
+            return cfg;
+        };
+    }
 }
