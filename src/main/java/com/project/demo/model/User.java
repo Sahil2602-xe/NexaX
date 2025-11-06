@@ -3,6 +3,7 @@ package com.project.demo.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.project.demo.domain.USER_ROLE;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,4 +48,8 @@ public class User {
     public boolean isCustomer() {
         return this.role == USER_ROLE.ROLE_CUSTOMER;
     }
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean twoFactorEnabled = false;
+
 }
