@@ -37,18 +37,15 @@ public class AppConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        return request -> {
-            CorsConfiguration cfg = new CorsConfiguration();
-            cfg.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
-                "https://nexa-x-frontend.vercel.app"
-            ));
-            cfg.setAllowedMethods(Collections.singletonList("*"));
-            cfg.setAllowedHeaders(Collections.singletonList("*"));
-            cfg.setAllowCredentials(true);
-            cfg.setExposedHeaders(Arrays.asList("Authorization"));
-            cfg.setMaxAge(3600L);
-            return cfg;
-        };
-    }
+    return request -> {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOriginPatterns(Collections.singletonList("*")); // ✅ allow all origins safely
+        cfg.setAllowedMethods(Collections.singletonList("*"));
+        cfg.setAllowedHeaders(Collections.singletonList("*"));
+        cfg.setAllowCredentials(true);
+        cfg.setExposedHeaders(Arrays.asList("Authorization"));
+        return cfg;
+    };
+}
+
 }
