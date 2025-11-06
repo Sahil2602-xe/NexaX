@@ -17,14 +17,10 @@ public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
 
     @Override
     public TwoFactorOTP createtwoFactorOTP(User user, String otp, String jwt) {
-        UUID uuid = UUID.randomUUID();
-
-        String id = uuid.toString();
-
         TwoFactorOTP twoFactorOtp = new TwoFactorOTP();
+        twoFactorOtp.setId(UUID.randomUUID().toString());
         twoFactorOtp.setOtp(otp);
         twoFactorOtp.setJwt(jwt);
-        twoFactorOtp.setId(id);
         twoFactorOtp.setUser(user);
 
         return twoFactorOtpRepository.save(twoFactorOtp);
@@ -37,13 +33,12 @@ public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
 
     @Override
     public TwoFactorOTP findById(String id) {
-        Optional<TwoFactorOTP> opt = twoFactorOtpRepository.findById(id);
-        return opt.orElse(null);
+        return twoFactorOtpRepository.findById(id).orElse(null);
     }
 
     @Override
     public boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
-        return twoFactorOtp.getOtp().equals(otp);
+        return twoFactorOtp != null && twoFactorOtp.getOtp().equals(otp);
     }
 
     @Override

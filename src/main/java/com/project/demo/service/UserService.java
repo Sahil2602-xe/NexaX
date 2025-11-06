@@ -5,15 +5,19 @@ import com.project.demo.model.User;
 
 public interface UserService {
 
-    public User findUserProfileByJwt(String jwt) throws Exception;
-    public User findUserByEmail(String email) throws Exception;
-    public User findUserById(Long userId) throws Exception;
+    User findUserProfileByJwt(String jwt) throws Exception;
 
-    public User enableTwoFactorAuthentication(
+    User findUserByEmail(String email) throws Exception;
+
+    User findUserById(Long userId) throws Exception;
+
+    User enableTwoFactorAuthentication(
             VerificationType verificationType,
             String sendTo,
             User user);
 
     User updatePassword(User user, String newPassword);
 
+    // ✅ added missing save() method
+    User save(User user);
 }

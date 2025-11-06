@@ -1,5 +1,6 @@
 package com.project.demo.controller;
 
+import com.project.demo.domain.VerificationType;
 import com.project.demo.model.TwoFactorOTP;
 import com.project.demo.model.User;
 import com.project.demo.service.EmailService;
@@ -34,7 +35,7 @@ public class TwoFactorController {
         // Create and save OTP record
         twoFactorOtpService.createtwoFactorOTP(user, otp, jwt);
 
-        // Send email (ensure EmailService is configured)
+        // Send email
         emailService.sendVerificationOtpEmail(user.getEmail(), otp);
 
         return new ResponseEntity<>("2FA OTP sent successfully to your email.", HttpStatus.OK);
@@ -55,9 +56,9 @@ public class TwoFactorController {
         boolean isVerified = twoFactorOtpService.verifyTwoFactorOtp(twoFactorOTP, otp);
 
         if (isVerified) {
-            user.getTwoFactorAuth().setEnabled(true);
-            user.getTwoFactorAuth().setSendTo(user.getEmail()); // mark email as 2FA method
-            userService.saveUser(user);
+            user.setTwoFactorEnabled(true);
+            user.setSendTo(VerificationType.EMAIL); // ✅ fixed enum assignment
+            userService.save(user); // ✅ fixed method name
             return new ResponseEntity<>("Two-Factor Authentication enabled successfully!", HttpStatus.OK);
         } else {
             return new ResponseEntity<>("Invalid or expired OTP.", HttpStatus.BAD_REQUEST);
