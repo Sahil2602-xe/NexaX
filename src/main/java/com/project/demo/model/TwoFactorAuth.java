@@ -3,14 +3,16 @@ package com.project.demo.model;
 import com.project.demo.domain.VerificationType;
 
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.Data;
 
+@Embeddable
 @Data
-@Embeddable  // ✅ Tells JPA this class is an embeddable value object
 public class TwoFactorAuth {
 
-    private boolean isEnabled = false;
+    private boolean enabled = false;
 
-    // EMAIL or MOBILE — reuse your enum from VerificationType
-    private VerificationType sendTo;
+    @Enumerated(EnumType.STRING)
+    private VerificationType sendTo; // EMAIL or MOBILE
 }

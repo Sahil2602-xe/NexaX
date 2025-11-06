@@ -26,9 +26,6 @@ public class User {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    @Embedded
-    private TwoFactorAuth twoFactorAuth = new TwoFactorAuth();
-
     @Enumerated(EnumType.STRING)
     private USER_ROLE role;
 
@@ -39,9 +36,9 @@ public class User {
     private String postcode;
     private String country;
 
-
-    private boolean twoFactorEnabled = false;
-
+    // ✅ Keep this for true 2FA integration
+    @Embedded
+    private TwoFactorAuth twoFactorAuth = new TwoFactorAuth();
 
     public boolean isAdmin() {
         return this.role == USER_ROLE.ROLE_ADMIN;

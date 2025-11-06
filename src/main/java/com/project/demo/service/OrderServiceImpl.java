@@ -1,18 +1,23 @@
 package com.project.demo.service;
 
-import com.project.demo.domain.OrderStatus;
-import com.project.demo.domain.OrderType;
-import com.project.demo.model.*;
-import com.project.demo.repository.OrderItemRepository;
-import com.project.demo.repository.OrderRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.beans.Transient;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.project.demo.domain.OrderStatus;
+import com.project.demo.domain.OrderType;
+import com.project.demo.model.Asset;
+import com.project.demo.model.Coin;
+import com.project.demo.model.Order;
+import com.project.demo.model.OrderItem;
+import com.project.demo.model.User;
+import com.project.demo.repository.OrderItemRepository;
+import com.project.demo.repository.OrderRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class OrderServiceImpl implements OrderService {

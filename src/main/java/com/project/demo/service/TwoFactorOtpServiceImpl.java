@@ -1,13 +1,13 @@
 package com.project.demo.service;
 
-import com.project.demo.model.TwoFactorOTP;
-import com.project.demo.model.User;
-import com.project.demo.repository.TwoFactorOtpRepository;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-import java.util.UUID;
+import com.project.demo.model.TwoFactorOTP;
+import com.project.demo.model.User;
+import com.project.demo.repository.TwoFactorOtpRepository;
 
 @Service
 public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
@@ -28,11 +28,13 @@ public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
 
     @Override
     public TwoFactorOTP findByUser(Long userId) {
-        return twoFactorOtpRepository.findByUserId(userId);
+        // ✅ FIXED: unwrap the Optional safely
+        return twoFactorOtpRepository.findByUserId(userId).orElse(null);
     }
 
     @Override
     public TwoFactorOTP findById(String id) {
+        // ✅ Already correct
         return twoFactorOtpRepository.findById(id).orElse(null);
     }
 
