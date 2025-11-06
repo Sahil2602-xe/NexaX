@@ -1,5 +1,4 @@
 [build]
-builder = "paketobuildpacks/builder:base"
 buildCommand = "./mvnw clean package -DskipTests"
 
 [start]
