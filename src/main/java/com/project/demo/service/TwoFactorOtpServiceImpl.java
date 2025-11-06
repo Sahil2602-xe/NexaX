@@ -1,9 +1,11 @@
 package com.project.demo.service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.project.demo.model.TwoFactorOTP;
 import com.project.demo.model.User;
@@ -16,50 +18,61 @@ public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
     private TwoFactorOtpRepository twoFactorOtpRepository;
 
     @Override
+    @Transactional
     public TwoFactorOTP createtwoFactorOTP(User user, String otp, String jwt) {
-        TwoFactorOTP twoFactorOtp = new TwoFactorOTP();
-        twoFactorOtp.setId(UUID.randomUUID().toString());
-        twoFactorOtp.setOtp(otp);
-        twoFactorOtp.setJwt(jwt);
-        twoFactorOtp.setUser(user);
+        // ✅ Delete any old OTPs for this user before creating new one
+        TwoFactorOTP existingOtp = twoFactorOtpRepository.findByUserId(user.getId()).orElse(null);
+        if (existingOtp != null) {
+            twoFactorOtpRepository.delete(existingOtp);
+        }
 
-        return twoFactorOtpRepository.save(twoFactorOtp);
+        TwoFactorOTP newOtp = new TwoFactorOTP();
+        newOtp.setId(UUID.randomUUID().toString());
+        newOtp.setOtp(otp);
+        newOtp.setJwt(jwt);
+        newOtp.setUser(user);
+        newOtp.setCreatedAt(LocalDateTime.now());
+        newOtp.setExpiresAt(LocalDateTime.now().plusMinutes(5)); // expires in 5 minutes
+
+        return twoFactorOtpRepository.save(newOtp);
     }
 
     @Override
     public TwoFactorOTP findByUser(Long userId) {
-        // ✅ FIXED: unwrap the Optional safely
         return twoFactorOtpRepository.findByUserId(userId).orElse(null);
     }
 
     @Override
     public TwoFactorOTP findById(String id) {
-        // ✅ Already correct
         return twoFactorOtpRepository.findById(id).orElse(null);
     }
 
     @Override
-public boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
-    boolean isValid = twoFactorOtp != null && twoFactorOtp.getOtp().equals(otp);
+    @Transactional
+    public boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
+        if (twoFactorOtp == null) return false;
 
-    if (isValid) {
-        // ✅ Delete OTP after verification, ensuring it's fresh from DB
-        TwoFactorOTP freshOtp = twoFactorOtpRepository.findById(twoFactorOtp.getId()).orElse(null);
-        if (freshOtp != null) {
-            twoFactorOtpRepository.delete(freshOtp);
+        // ✅ Check expiry first
+        if (twoFactorOtp.isExpired()) {
+            twoFactorOtpRepository.deleteById(twoFactorOtp.getId());
+            return false;
+        }
+
+        boolean isValid = twoFactorOtp.getOtp().equals(otp);
+
+        if (isValid) {
+            // ✅ Delete after successful verification to prevent reuse
+            twoFactorOtpRepository.deleteById(twoFactorOtp.getId());
+        }
+
+        return isValid;
+    }
+
+    @Override
+    @Transactional
+    public void deleteTwoFactorOtp(TwoFactorOTP twoFactorOtp) {
+        if (twoFactorOtp != null && twoFactorOtp.getId() != null) {
+            twoFactorOtpRepository.deleteById(twoFactorOtp.getId());
         }
     }
-
-    return isValid;
-}
-
-@Override
-public void deleteTwoFactorOtp(TwoFactorOTP twoFactorOtp) {
-    // ✅ Always fetch a fresh reference before deleting
-    TwoFactorOTP freshOtp = twoFactorOtpRepository.findById(twoFactorOtp.getId()).orElse(null);
-    if (freshOtp != null) {
-        twoFactorOtpRepository.delete(freshOtp);
-    }
-}
-
 }
