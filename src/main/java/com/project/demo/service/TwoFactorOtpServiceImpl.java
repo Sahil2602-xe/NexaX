@@ -39,12 +39,27 @@ public class TwoFactorOtpServiceImpl implements TwoFactorOtpService {
     }
 
     @Override
-    public boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
-        return twoFactorOtp != null && twoFactorOtp.getOtp().equals(otp);
+public boolean verifyTwoFactorOtp(TwoFactorOTP twoFactorOtp, String otp) {
+    boolean isValid = twoFactorOtp != null && twoFactorOtp.getOtp().equals(otp);
+
+    if (isValid) {
+        // ✅ Delete OTP after verification, ensuring it's fresh from DB
+        TwoFactorOTP freshOtp = twoFactorOtpRepository.findById(twoFactorOtp.getId()).orElse(null);
+        if (freshOtp != null) {
+            twoFactorOtpRepository.delete(freshOtp);
+        }
     }
 
-    @Override
-    public void deleteTwoFactorOtp(TwoFactorOTP twoFactorOtp) {
-        twoFactorOtpRepository.delete(twoFactorOtp);
+    return isValid;
+}
+
+@Override
+public void deleteTwoFactorOtp(TwoFactorOTP twoFactorOtp) {
+    // ✅ Always fetch a fresh reference before deleting
+    TwoFactorOTP freshOtp = twoFactorOtpRepository.findById(twoFactorOtp.getId()).orElse(null);
+    if (freshOtp != null) {
+        twoFactorOtpRepository.delete(freshOtp);
     }
+}
+
 }

@@ -3,6 +3,7 @@ package com.project.demo.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,16 +35,26 @@ public class TwoFactorController {
     @PostMapping("/send-otp")
     public ResponseEntity<String> send2FAOtp(@RequestHeader("Authorization") String jwt) throws Exception {
         User user = userService.findUserProfileByJwt(jwt);
-        String otp = OtpUtils.generateOTP();
 
+        // Delete any old OTP to avoid stale object issues
+        TwoFactorOTP existingOtp = twoFactorOtpService.findByUser(user.getId());
+        if (existingOtp != null) {
+            twoFactorOtpService.deleteTwoFactorOtp(existingOtp);
+        }
+
+        // Generate new OTP
+        String otp = OtpUtils.generateOTP();
         twoFactorOtpService.createtwoFactorOTP(user, otp, jwt);
+
+        // Send via email
         emailService.sendVerificationOtpEmail(user.getEmail(), otp);
 
-        return new ResponseEntity<>("2FA OTP sent successfully to your email.", HttpStatus.OK);
+        return new ResponseEntity<>("✅ 2FA OTP sent successfully to your email.", HttpStatus.OK);
     }
 
-    // ✅ Step 2: Verify OTP and enable 2FA
+    // ✅ Step 2: Verify OTP and enable 2FA (wrapped in a transaction)
     @PostMapping("/verify-otp")
+    @Transactional
     public ResponseEntity<String> verify2FAOtp(
             @RequestHeader("Authorization") String jwt,
             @RequestParam String otp) throws Exception {
@@ -51,19 +62,24 @@ public class TwoFactorController {
         User user = userService.findUserProfileByJwt(jwt);
         TwoFactorOTP twoFactorOTP = twoFactorOtpService.findByUser(user.getId());
 
-        if (twoFactorOTP == null)
-            throw new Exception("No OTP found for user.");
+        if (twoFactorOTP == null) {
+            throw new Exception("No OTP found for this user. Please request a new one.");
+        }
 
         boolean isVerified = twoFactorOtpService.verifyTwoFactorOtp(twoFactorOTP, otp);
 
         if (isVerified) {
-            // ✅ use embedded object now
+            // ✅ Update user 2FA settings safely
             user.getTwoFactorAuth().setEnabled(true);
             user.getTwoFactorAuth().setSendTo(VerificationType.EMAIL);
             userService.save(user);
-            return new ResponseEntity<>("Two-Factor Authentication enabled successfully!", HttpStatus.OK);
+
+            // ✅ Delete OTP after successful verification
+            twoFactorOtpService.deleteTwoFactorOtp(twoFactorOTP);
+
+            return new ResponseEntity<>("✅ Two-Factor Authentication enabled successfully!", HttpStatus.OK);
         } else {
-            return new ResponseEntity<>("Invalid or expired OTP.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("❌ Invalid or expired OTP. Please try again.", HttpStatus.BAD_REQUEST);
         }
     }
 }
