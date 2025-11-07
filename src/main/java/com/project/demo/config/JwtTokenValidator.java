@@ -14,7 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
@@ -24,6 +23,11 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class JwtTokenValidator extends OncePerRequestFilter {
 
+    // ✅ Same secret key as JwtProvider
+    private static final SecretKey key = Keys.hmacShaKeyFor(
+            "thisisaverysecureandlongsecretkeyusedforjwtsignaturevalidation12345".getBytes()
+    );
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -31,29 +35,35 @@ public class JwtTokenValidator extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String header = request.getHeader(JwtConstant.JWT_HEADER);
+        String path = request.getRequestURI();
+
+        // ✅ Skip JWT check for public endpoints
+        if (path.startsWith("/auth") || path.startsWith("/coins") || path.startsWith("/api/users")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // ✅ Standard JWT validation for protected routes
+        String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
             String jwt = header.substring(7);
 
             try {
-                SecretKey key = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
-
-                // Proper parserBuilder usage for jjwt
-                Jws<Claims> jwsClaims = Jwts.parser()
-                        .setSigningKey(key)
+                // Parse JWT and extract claims
+                Claims claims = Jwts.parser()
+                        .verifyWith(key)
                         .build()
-                        .parseClaimsJws(jwt);
-
-                Claims claims = jwsClaims.getBody();
+                        .parseSignedClaims(jwt)
+                        .getPayload();
 
                 String email = claims.get("email", String.class);
                 String role = claims.get("role", String.class);
 
                 List<GrantedAuthority> authorities = new ArrayList<>();
                 if (role != null && !role.isBlank()) {
-                    // make sure the role has the prefix expected by Spring Securiy (if you use ROLE_ names)
-                    authorities.add(new SimpleGrantedAuthority(role));
+                    String roleName = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                    authorities.add(new SimpleGrantedAuthority(roleName));
                 }
 
                 Authentication authentication =
@@ -61,14 +71,15 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                // invalid token => clear context and return 401
-                SecurityContextHolder.clearContext();
+                // 🔴 If token invalid or expired → return 401 Unauthorized
+                e.printStackTrace();
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired JWT token.");
+                response.getWriter().write("Invalid or expired JWT token");
                 return;
             }
         }
 
+        // Continue filter chain
         filterChain.doFilter(request, response);
     }
 }
