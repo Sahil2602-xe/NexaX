@@ -1,7 +1,7 @@
 package com.project.demo.config;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,31 +12,40 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 @Configuration
 public class AppConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .sessionManagement(management ->
+            // ✅ Use stateless session for JWT-based auth
+            .sessionManagement(management -> 
                 management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
+            // ✅ Define which endpoints are open and which require auth
             .authorizeHttpRequests(auth -> auth
-                // allow authentication endpoints publicly
-                .requestMatchers("/auth/**").permitAll()
-                // allow these user endpoints for password reset and verification
-                .requestMatchers("/api/users/reset-password/**", "/api/users/reset-pass/**", "/api/users/verification/**").permitAll()
-                // admin routes require ADMIN role
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // all other /api endpoints must be authenticated
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll()
-            )
+    // Public endpoints
+    .requestMatchers("/auth/**").permitAll()
+    .requestMatchers("/api/users/reset-password/**").permitAll()
+    .requestMatchers("/api/users/reset-pass/**").permitAll()
+    .requestMatchers("/api/users/verification/**").permitAll()
+
+    // Make coins endpoints public (allows frontend to call /coins and /coins/details/:id without auth)
+    .requestMatchers("/coins/**").permitAll()
+
+    // Everything else requires auth
+    .anyRequest().authenticated()
+)
+
+
+            // ✅ Add your JWT validator before authentication happens
             .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
+
+            // ✅ Disable CSRF for API
             .csrf(csrf -> csrf.disable())
+
+            // ✅ Enable CORS for frontend → backend calls
             .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         return http.build();
@@ -44,22 +53,27 @@ public class AppConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        return (HttpServletRequest request) -> {
+        return request -> {
             CorsConfiguration cfg = new CorsConfiguration();
-            // allow the exact origins you use in production + local dev
-            List<String> allowedOrigins = Arrays.asList(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://nexax.up.railway.app",
-                "https://nexa-x-frontend.vercel.app",
-                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app" // any Vercel variant you used
-            );
 
-            cfg.setAllowedOrigins(allowedOrigins);
-            cfg.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
-            cfg.setAllowedHeaders(Arrays.asList("*"));
+            // ✅ Allow your frontend and local dev origins
+            cfg.setAllowedOrigins(Arrays.asList(
+                "https://nexa-x-frontend.vercel.app",
+                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app",
+                "http://localhost:5173"
+            ));
+
+            // ✅ Allow common HTTP methods
+            cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+            // ✅ Allow all headers and credentials
+            cfg.setAllowedHeaders(Collections.singletonList("*"));
             cfg.setAllowCredentials(true);
-            cfg.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
+
+            // ✅ Expose Authorization header to frontend
+            cfg.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+
+            // Cache preflight response
             cfg.setMaxAge(3600L);
             return cfg;
         };
