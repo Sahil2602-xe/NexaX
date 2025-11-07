@@ -37,11 +37,15 @@ public class JwtTokenValidator extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // ✅ Skip JWT check for public endpoints
-        if (path.startsWith("/auth") || path.startsWith("/coins") || path.startsWith("/api/users")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+// ✅ Skip JWT validation only for public routes
+if (path.startsWith("/auth")
+        || path.startsWith("/coins")
+        || path.startsWith("/api/users/reset")
+        || path.startsWith("/api/users/verification")) {
+    filterChain.doFilter(request, response);
+    return;
+}
+
 
         // ✅ Standard JWT validation for protected routes
         String header = request.getHeader("Authorization");
