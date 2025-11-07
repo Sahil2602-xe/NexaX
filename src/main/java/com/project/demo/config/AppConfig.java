@@ -1,6 +1,6 @@
-// src/main/java/com/project/demo/config/AppConfig.java
 package com.project.demo.config;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.context.annotation.Bean;
@@ -23,14 +23,15 @@ public class AppConfig {
             .sessionManagement(management ->
                 management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+
             .authorizeHttpRequests(auth -> auth
-                // public endpoints
-                .requestMatchers("/auth/**", "/coins/**", "/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // forgot/reset endpoints you had
+                // allow authentication endpoints publicly
+                .requestMatchers("/auth/**").permitAll()
+                // allow these user endpoints for password reset and verification
                 .requestMatchers("/api/users/reset-password/**", "/api/users/reset-pass/**", "/api/users/verification/**").permitAll()
-                // admin
+                // admin routes require ADMIN role
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // any other api requires authentication
+                // all other /api endpoints must be authenticated
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )
@@ -45,18 +46,20 @@ public class AppConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         return (HttpServletRequest request) -> {
             CorsConfiguration cfg = new CorsConfiguration();
-            // add your frontend origin(s) here
-            cfg.setAllowedOriginPatterns(List.of(
+            // allow the exact origins you use in production + local dev
+            List<String> allowedOrigins = Arrays.asList(
                 "http://localhost:5173",
                 "http://localhost:3000",
+                "https://nexax.up.railway.app",
                 "https://nexa-x-frontend.vercel.app",
-                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app", // if used
-                "https://nexax.up.railway.app"
-            ));
-            cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-            cfg.setAllowedHeaders(List.of("*"));
+                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app" // any Vercel variant you used
+            );
+
+            cfg.setAllowedOrigins(allowedOrigins);
+            cfg.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
+            cfg.setAllowedHeaders(Arrays.asList("*"));
             cfg.setAllowCredentials(true);
-            cfg.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
+            cfg.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
             cfg.setMaxAge(3600L);
             return cfg;
         };
