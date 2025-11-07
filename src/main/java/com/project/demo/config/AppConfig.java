@@ -1,6 +1,7 @@
 package com.project.demo.config;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,54 +18,64 @@ public class AppConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // ✅ Stateless JWT authentication
+            // JWT-based auth should be stateless
             .sessionManagement(management ->
                 management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
-            // ✅ Public vs protected endpoints
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()                      // public auth routes
-                .requestMatchers("/api/users/profile").permitAll()
-                .requestMatchers("/api/users/reset-password/**").permitAll()  // password reset
+                // Public endpoints
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/coins/**").permitAll()
+                .requestMatchers("/api/users/reset-password/**").permitAll()
                 .requestMatchers("/api/users/reset-pass/**").permitAll()
                 .requestMatchers("/api/users/verification/**").permitAll()
-                .requestMatchers("/coins/**").permitAll()                     // public coin APIs
-                .anyRequest().authenticated()                                 // everything else protected
+
+                // Everything else requires authentication
+                .anyRequest().authenticated()
             )
 
-            // ✅ Add JWT filter
+            // Add your JWT filter
             .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
 
-            // ✅ Disable CSRF
+            // Disable CSRF for APIs
             .csrf(csrf -> csrf.disable())
 
-            // ✅ Enable CORS for frontend → backend
+            // Enable global CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         return http.build();
     }
 
     @Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    return request -> {
-        CorsConfiguration cfg = new CorsConfiguration();
+    public CorsConfigurationSource corsConfigurationSource() {
+        return request -> {
+            CorsConfiguration cfg = new CorsConfiguration();
 
-        // ✅ Allow your frontend and Vercel preview domains
-        cfg.setAllowedOrigins(Arrays.asList(
-            "https://nexa-x-frontend.vercel.app",
-            "https://nexa-x-frontend-5qfwkjyv5-shaikhsahil2602-9911s-projects.vercel.app",
-            "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app",
-            "http://localhost:5173"
-        ));
+            // ✅ Allow all your frontend URLs (add every vercel variant)
+            cfg.setAllowedOrigins(Arrays.asList(
+                "https://nexa-x-frontend.vercel.app",
+                "https://nexa-x-frontend-shaikhsahil2602.vercel.app",
+                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app",
+                "http://localhost:5173"
+            ));
 
-        cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        cfg.setExposedHeaders(Arrays.asList("Authorization"));
-        cfg.setAllowCredentials(true);
-        cfg.setMaxAge(3600L);
-        return cfg;
-    };
-}
+            // ✅ Allow all common HTTP methods
+            cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
+            // ✅ Allow all headers so Authorization passes through
+            cfg.setAllowedHeaders(Collections.singletonList("*"));
+
+            // ✅ Important: allow credentials
+            cfg.setAllowCredentials(true);
+
+            // ✅ Expose Authorization header so frontend can read it
+            cfg.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+
+            // Cache preflight responses for an hour
+            cfg.setMaxAge(3600L);
+
+            return cfg;
+        };
+    }
 }
