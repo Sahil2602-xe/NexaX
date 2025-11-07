@@ -23,10 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class JwtTokenValidator extends OncePerRequestFilter {
 
-    private static final SecretKey key = Keys.hmacShaKeyFor(
-            "thisisaverysecureandlongsecretkeyusedforjwtsignaturevalidation12345".getBytes()
-    );
-
+    private static final SecretKey key = Keys.hmacShaKeyFor(JwtConstant.SECRET_KEY.getBytes());
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -80,7 +77,10 @@ public class JwtTokenValidator extends OncePerRequestFilter {
             }
         }
 
-        // Continue the chain
+        System.out.println("==> Path: " + request.getRequestURI());
+System.out.println("==> Authorization header: " + header);
+System.out.println("==> Authentication before: " + SecurityContextHolder.getContext().getAuthentication());
+
         filterChain.doFilter(request, response);
     }
 }
