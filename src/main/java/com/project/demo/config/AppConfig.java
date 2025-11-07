@@ -1,7 +1,7 @@
+// src/main/java/com/project/demo/config/AppConfig.java
 package com.project.demo.config;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,47 +12,52 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @Configuration
 public class AppConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // ✅ Public endpoints (auth & password reset)
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/api/users/reset-password/**").permitAll()
-                .requestMatchers("/api/users/reset-pass/**").permitAll()
-                .requestMatchers("/api/users/verification/**").permitAll()
-                // ✅ Secure everything else
-                .anyRequest().authenticated()
+            .sessionManagement(management ->
+                management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class);
+            .authorizeHttpRequests(auth -> auth
+                // public endpoints
+                .requestMatchers("/auth/**", "/coins/**", "/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // forgot/reset endpoints you had
+                .requestMatchers("/api/users/reset-password/**", "/api/users/reset-pass/**", "/api/users/verification/**").permitAll()
+                // admin
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // any other api requires authentication
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
+            )
+            .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        return request -> {
+        return (HttpServletRequest request) -> {
             CorsConfiguration cfg = new CorsConfiguration();
-
-            // ✅ Allow both your deployed & preview URLs + localhost
-            cfg.setAllowedOriginPatterns(Arrays.asList(
+            // add your frontend origin(s) here
+            cfg.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "http://localhost:3000",
                 "https://nexa-x-frontend.vercel.app",
-                "https://*.vercel.app",
-                "http://localhost:5173"
+                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app", // if used
+                "https://nexax.up.railway.app"
             ));
-
-            cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-            cfg.setAllowedHeaders(Collections.singletonList("*"));
+            cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+            cfg.setAllowedHeaders(List.of("*"));
             cfg.setAllowCredentials(true);
-            cfg.setExposedHeaders(Arrays.asList("Authorization"));
+            cfg.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
             cfg.setMaxAge(3600L);
-
             return cfg;
         };
     }
