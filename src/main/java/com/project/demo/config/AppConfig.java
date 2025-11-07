@@ -18,45 +18,19 @@ public class AppConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // ✅ Make session stateless for JWT
-            .sessionManagement(management ->
-                management.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-
-            // ✅ Main authorization rules
-            .authorizeHttpRequests(auth -> auth
-                // --- Public endpoints (no JWT needed) ---
-                .requestMatchers(
-                    "/auth/**",
-                    "/api/users/reset-password/**",
-                    "/api/users/reset-pass/**",
-                    "/api/users/verification/**",
-                    "/api/public/**"
-                ).permitAll()
-
-                // --- Admin-only access ---
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                // --- Authenticated endpoints (JWT required) ---
-                .requestMatchers(
-                    "/api/users/**",
-                    "/api/wallet/**",
-                    "/api/transactions/**",
-                    "/api/2fa/**"
-                ).authenticated()
-
-                // --- Everything else allowed ---
-                .anyRequest().permitAll()
-            )
-
-            // ✅ JWT filter
-            .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class)
-
-            // ✅ Disable CSRF for API
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-
-            // ✅ Enable CORS
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()));
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                // ✅ Public endpoints (auth & password reset)
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/api/users/reset-password/**").permitAll()
+                .requestMatchers("/api/users/reset-pass/**").permitAll()
+                .requestMatchers("/api/users/verification/**").permitAll()
+                // ✅ Secure everything else
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(new JwtTokenValidator(), BasicAuthenticationFilter.class);
 
         return http.build();
     }
@@ -66,13 +40,14 @@ public class AppConfig {
         return request -> {
             CorsConfiguration cfg = new CorsConfiguration();
 
-            // ✅ Allow your local + production frontend
-            cfg.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
-                "https://nexa-x-frontend.vercel.app"
+            // ✅ Allow both your deployed & preview URLs + localhost
+            cfg.setAllowedOriginPatterns(Arrays.asList(
+                "https://nexa-x-frontend.vercel.app",
+                "https://*.vercel.app",
+                "http://localhost:5173"
             ));
 
-            cfg.setAllowedMethods(Collections.singletonList("*"));
+            cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
             cfg.setAllowedHeaders(Collections.singletonList("*"));
             cfg.setAllowCredentials(true);
             cfg.setExposedHeaders(Arrays.asList("Authorization"));
