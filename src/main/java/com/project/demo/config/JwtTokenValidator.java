@@ -77,9 +77,6 @@ public class JwtTokenValidator extends OncePerRequestFilter {
             }
         }
 
-        System.out.println("==> Path: " + request.getRequestURI());
-System.out.println("==> Authorization header: " + header);
-System.out.println("==> Authentication before: " + SecurityContextHolder.getContext().getAuthentication());
 
         filterChain.doFilter(request, response);
     }
