@@ -23,7 +23,6 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class JwtTokenValidator extends OncePerRequestFilter {
 
-    // ✅ Same secret key as JwtProvider
     private static final SecretKey key = Keys.hmacShaKeyFor(
             "thisisaverysecureandlongsecretkeyusedforjwtsignaturevalidation12345".getBytes()
     );
@@ -37,15 +36,14 @@ public class JwtTokenValidator extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-// ✅ Skip JWT validation only for public routes
-if (path.startsWith("/auth")
-        || path.startsWith("/coins")
-        || path.startsWith("/api/users/reset")
-        || path.startsWith("/api/users/verification")) {
-    filterChain.doFilter(request, response);
-    return;
-}
-
+        // ✅ Skip JWT validation for all public endpoints
+        if (path.startsWith("/auth")
+                || path.startsWith("/coins")
+                || path.startsWith("/api/users/reset")
+                || path.startsWith("/api/users/verification")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // ✅ Standard JWT validation for protected routes
         String header = request.getHeader("Authorization");
@@ -54,7 +52,6 @@ if (path.startsWith("/auth")
             String jwt = header.substring(7);
 
             try {
-                // Parse JWT and extract claims
                 Claims claims = Jwts.parser()
                         .verifyWith(key)
                         .build()
@@ -75,15 +72,15 @@ if (path.startsWith("/auth")
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
             } catch (Exception e) {
-                // 🔴 If token invalid or expired → return 401 Unauthorized
-                e.printStackTrace();
+                // 🔴 Send proper JSON response instead of plain text
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired JWT token");
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Invalid or expired JWT token\"}");
                 return;
             }
         }
 
-        // Continue filter chain
+        // Continue the chain
         filterChain.doFilter(request, response);
     }
 }
