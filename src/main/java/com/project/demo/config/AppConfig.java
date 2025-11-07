@@ -1,7 +1,6 @@
 package com.project.demo.config;
 
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +25,7 @@ public class AppConfig {
             // ✅ Public vs protected endpoints
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()                      // public auth routes
+                .requestMatchers("/api/users/profile").permitAll()
                 .requestMatchers("/api/users/reset-password/**").permitAll()  // password reset
                 .requestMatchers("/api/users/reset-pass/**").permitAll()
                 .requestMatchers("/api/users/verification/**").permitAll()
@@ -46,23 +46,25 @@ public class AppConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        return request -> {
-            CorsConfiguration cfg = new CorsConfiguration();
+public CorsConfigurationSource corsConfigurationSource() {
+    return request -> {
+        CorsConfiguration cfg = new CorsConfiguration();
 
-            cfg.setAllowedOrigins(Arrays.asList(
-                "https://nexa-x-frontend.vercel.app",
-                "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app",
-                "http://localhost:5173"
-            ));
+        // ✅ Allow your frontend and Vercel preview domains
+        cfg.setAllowedOrigins(Arrays.asList(
+            "https://nexa-x-frontend.vercel.app",
+            "https://nexa-x-frontend-5qfwkjyv5-shaikhsahil2602-9911s-projects.vercel.app",
+            "https://nexa-x-frontend-9xg5mnavb-shaikhsahil2602-9911s-projects.vercel.app",
+            "http://localhost:5173"
+        ));
 
-            cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            cfg.setAllowedHeaders(Collections.singletonList("*"));
-            cfg.setAllowCredentials(true);
-            cfg.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-            cfg.setMaxAge(3600L);
+        cfg.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        cfg.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        cfg.setExposedHeaders(Arrays.asList("Authorization"));
+        cfg.setAllowCredentials(true);
+        cfg.setMaxAge(3600L);
+        return cfg;
+    };
+}
 
-            return cfg;
-        };
-    }
 }
