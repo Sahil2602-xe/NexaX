@@ -10,25 +10,49 @@ import org.springframework.stereotype.Service;
 
 import com.project.demo.domain.WithdrawalStatus;
 import com.project.demo.model.User;
+import com.project.demo.model.Wallet;
 import com.project.demo.model.Withdrawal;
+import com.project.demo.repository.WalletRepository;
 import com.project.demo.repository.WithdrawalRepository;
+
 
 @Service
 public class WithdrawalServiceImpl implements WithdrawalService {
+    @Autowired
+    private WalletRepository walletRepository;
+
 
     @Autowired
     private WithdrawalRepository withdrawalRepository;
 
     @Override
-    public Withdrawal requestWithdrawal(BigDecimal amount, User user) {
-        Withdrawal withdrawal = new Withdrawal();
-        withdrawal.setAmount(amount);
-        withdrawal.setUser(user);
-        withdrawal.setStatus(WithdrawalStatus.PENDING);
-        withdrawal.setDate(LocalDateTime.now());
+public Withdrawal requestWithdrawal(BigDecimal amount, User user) {
+    // ✅ Fetch user's wallet
+    Wallet wallet = walletRepository.findByUserId(user.getId());
 
-        return withdrawalRepository.save(withdrawal);
+if (wallet == null) {
+    throw new RuntimeException("Wallet not found for user");
+}
+
+    // ✅ Check for sufficient balance
+    if (wallet.getBalance().compareTo(amount) < 0) {
+        throw new RuntimeException("Insufficient balance for withdrawal");
     }
+
+    // ✅ Deduct amount temporarily (optional: only if you want to lock funds)
+    wallet.setBalance(wallet.getBalance().subtract(amount));
+    walletRepository.save(wallet);
+
+    // ✅ Proceed with withdrawal creation
+    Withdrawal withdrawal = new Withdrawal();
+    withdrawal.setAmount(amount);
+    withdrawal.setUser(user);
+    withdrawal.setStatus(WithdrawalStatus.PENDING);
+    withdrawal.setDate(LocalDateTime.now());
+
+    return withdrawalRepository.save(withdrawal);
+}
+
 
     @Override
     public Withdrawal proceedWithWithdrawal(Long withdrawalId, boolean accept) throws Exception {
