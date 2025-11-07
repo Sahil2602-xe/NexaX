@@ -12,6 +12,7 @@ import org.springframework.security.core.GrantedAuthority;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 public class JwtProvider {
@@ -29,11 +30,11 @@ public class JwtProvider {
 
         return Jwts.builder()
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) 
+                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 1 day
                 .claim("email", auth.getName())
                 .claim("authorities", roles)
-                .claim("role", primaryRole) 
-                .signWith(key)
+                .claim("role", primaryRole)
+                .signWith(key, SignatureAlgorithm.HS512) // ✅ Explicitly use HS512
                 .compact();
     }
 
