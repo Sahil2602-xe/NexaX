@@ -37,13 +37,21 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${razorpay.api.secret}")
     private String apiSecretKey;
 
-    // ✅ Base URL logic for flexible local/production environments
+    // ✅ Smart environment-based frontend URL selector
     private String getBaseUrl() {
-        // If running locally, use localhost
+        // First priority — FRONTEND_URL environment variable
+        String frontendUrl = System.getenv("FRONTEND_URL");
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            return frontendUrl;
+        }
+
+        // Fallback to ENVIRONMENT variable
         String env = System.getenv("ENVIRONMENT");
         if (env != null && env.equalsIgnoreCase("PROD")) {
             return "https://nexa-x-frontend.vercel.app";
         }
+
+        // Default to local dev
         return "http://localhost:5173";
     }
 
@@ -74,11 +82,11 @@ public class PaymentServiceImpl implements PaymentService {
                 RazorpayClient razorpay = new RazorpayClient(apiKey, apiSecretKey);
                 Payment payment = razorpay.payments.fetch(paymentId);
 
-                Integer amount = payment.get("amount");
                 String status = payment.get("status");
 
                 if (status.equals("captured")) {
                     paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
+                    paymentOrderRepository.save(paymentOrder);
                     return true;
                 }
 
@@ -95,18 +103,19 @@ public class PaymentServiceImpl implements PaymentService {
         return false;
     }
 
+    // ✅ Razorpay payment link creation
     @Override
     public PaymentResponse createRazorpayPaymentLink(User user, BigDecimal amount, Long orderId)
             throws RazorpayException {
 
-        Long Amount = amount.multiply(BigDecimal.valueOf(100)).longValue(); // Convert to paise
+        Long amountInPaise = amount.multiply(BigDecimal.valueOf(100)).longValue(); // Convert INR to paise
         String baseUrl = getBaseUrl();
 
         try {
             RazorpayClient razorpay = new RazorpayClient(apiKey, apiSecretKey);
 
             JSONObject paymentLinkRequest = new JSONObject();
-            paymentLinkRequest.put("amount", Amount);
+            paymentLinkRequest.put("amount", amountInPaise);
             paymentLinkRequest.put("currency", "INR");
 
             JSONObject customer = new JSONObject();
@@ -120,7 +129,7 @@ public class PaymentServiceImpl implements PaymentService {
 
             paymentLinkRequest.put("reminder_enable", true);
 
-            // ✅ Redirect URL depending on environment
+            // ✅ Use environment-based callback
             paymentLinkRequest.put("callback_url", baseUrl + "/wallet?order_id=" + orderId);
             paymentLinkRequest.put("callback_method", "get");
 
@@ -130,21 +139,23 @@ public class PaymentServiceImpl implements PaymentService {
 
             PaymentResponse res = new PaymentResponse();
             res.setPayment_url(paymentLinkUrl);
-
             return res;
 
         } catch (RazorpayException e) {
-            System.out.println("Error creating Payment Link: " + e.getMessage());
+            System.err.println("⚠️ Error creating Razorpay Payment Link: " + e.getMessage());
             throw new RazorpayException(e.getMessage());
         }
     }
 
+    // ✅ Stripe payment link creation
     @Override
-    public PaymentResponse createStripePaymentLink(User user, BigDecimal amount, Long orderId) throws StripeException {
-        Stripe.apiKey = stripeSecretKey;
+    public PaymentResponse createStripePaymentLink(User user, BigDecimal amount, Long orderId)
+            throws StripeException {
 
+        Stripe.apiKey = stripeSecretKey;
         String baseUrl = getBaseUrl();
-        Long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
+
+        Long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue(); // Convert USD to cents
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
